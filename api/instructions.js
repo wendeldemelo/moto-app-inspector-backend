@@ -34,29 +34,40 @@ Requirements:
 
         // Native call to the Gemini API (No need for npm install)
         const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-        
+
         const geminiResponse = await fetch(geminiUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }]
-            })
-        });
+@@ -45,33 +45,18 @@ Requirements:
 
         const geminiData = await geminiResponse.json();
-        
+
+        // 1. Success Case
         if (geminiData && geminiData.candidates && geminiData.candidates[0]?.content?.parts?.[0]?.text) {
             const aiText = geminiData.candidates[0].content.parts[0].text;
             return response.status(200).json({ instructions: aiText });
         } 
+
+        // 2. ACTIVE DIAGNOSTICS: Captures the two most common Google error scenarios.
+        let motivoErro = "Unknown payload structure";
         
+        if (geminiData.error) {
+            // Scenario A: Invalid, expired, or space-enabled API key
+            motivoErro = `Google API rejected the key. Message: ${geminiData.error.message}`;
+        } else if (geminiData.candidates && geminiData.candidates[0]?.finishReason) {
+            // Scenario B: The app's name or package triggered Gemini's security filter (e.g., sensitive terms).
+            motivoErro = `Security filter activated. Reason: ${geminiData.candidates[0].finishReason}`;
+        } else {
+            // Scenario C: Raw response in case of parsing failure.
+            motivoErro = JSON.stringify(geminiData);
+        }
+
         return response.status(200).json({ 
-            instructions: "Smart instructions are temporarily unavailable. Please use the system's native shortcuts listed below." 
+            instructions: `[DEBUG AI] The server responded, but Gemini blocked the operation.\n\n➔ ${motivoErro}` 
         });
 
     } catch (error) {
         return response.status(200).json({ 
-            instructions: "Failed to process AI recommendations. Use the operating system dashboards to audit the application." 
+            instructions: `[DEBUG AI] Critical runtime error in Node.js:\n\n➔ ${error.message}` 
         });
     }
 }
