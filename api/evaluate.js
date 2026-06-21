@@ -17,10 +17,16 @@ export default async function handler(request, response) {
             const reasons = [];
 
             // 1. Old Target SDK Rule
-            if (app.target_sdk_version < (currentDisplaySdk - 2)) {
+            if (app.target_sdk_version === (currentDisplaySdk - 1)) {
+                // App in SDK 35 running on device 36 receives a mild optimization warning.
+                score -= 10;
+                reasons.push(`Not fully optimized for Android 16 features (Targets Android 15) (-10)`);
+            } else if (app.target_sdk_version < (currentDisplaySdk - 1) && app.target_sdk_version >= 30) {
+                // Older apps losing the default compliance window.
                 score -= 25;
-                reasons.push("App target SDK below the current Android version (-25)");
+                reasons.push("App target SDK below the current Android version guidelines (-25)");
             }
+            
             if (app.target_sdk_version < 30) {
                 score -= 35;
                 reasons.push("Critical legacy Target SDK (lower than Android 11) (-35)");
@@ -62,6 +68,8 @@ export default async function handler(request, response) {
                 reasons: reasons
             };
         });
+
+        reports.sort((a, b) => a.score - b.score);
 
         // RULE 3: Mathematical calculation of the aggregate device score
         const overallScore = reports.length > 0 
