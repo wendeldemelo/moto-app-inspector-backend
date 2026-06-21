@@ -37,7 +37,9 @@ Requirements:
 
         const geminiResponse = await fetch(geminiUrl, {
             method: 'POST',
-@@ -45,33 +45,18 @@ Requirements:
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        });
 
         const geminiData = await geminiResponse.json();
 
@@ -48,21 +50,21 @@ Requirements:
         } 
 
         // 2. ACTIVE DIAGNOSTICS: Captures the two most common Google error scenarios.
-        let motivoErro = "Unknown payload structure";
+        let reasonError = "Unknown payload structure";
         
         if (geminiData.error) {
             // Scenario A: Invalid, expired, or space-enabled API key
-            motivoErro = `Google API rejected the key. Message: ${geminiData.error.message}`;
+            reasonError = `Google API rejected the key. Message: ${geminiData.error.message}`;
         } else if (geminiData.candidates && geminiData.candidates[0]?.finishReason) {
             // Scenario B: The app's name or package triggered Gemini's security filter (e.g., sensitive terms).
-            motivoErro = `Security filter activated. Reason: ${geminiData.candidates[0].finishReason}`;
+            reasonError = `Security filter activated. Reason: ${geminiData.candidates[0].finishReason}`;
         } else {
             // Scenario C: Raw response in case of parsing failure.
-            motivoErro = JSON.stringify(geminiData);
+            reasonError = JSON.stringify(geminiData);
         }
 
         return response.status(200).json({ 
-            instructions: `[DEBUG AI] The server responded, but Gemini blocked the operation.\n\n➔ ${motivoErro}` 
+            instructions: `[DEBUG AI] The server responded, but Gemini blocked the operation.\n\n➔ ${reasonError}` 
         });
 
     } catch (error) {
