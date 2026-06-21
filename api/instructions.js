@@ -10,9 +10,9 @@ export default async function handler(request, response) {
         const apiKey = process.env.GEMINI_API_KEY;
         
         if (!apiKey) {
-            return response.status(500).json({ 
+            return response.status(200).json({ 
                 error: "Missing configuration", 
-                details: "The GEMINI_API_KEY key was not configured in Vercel." 
+                details: "The GEMINI_API_KEY key was not configured." 
             });
         }
 
@@ -33,7 +33,7 @@ Requirements:
 4. Do not mention technical terms like "SDK" or "API Level" to the user, translate it to "optimization version".`;
 
         // Native call to the Gemini API (No need for npm install)
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
         const geminiResponse = await fetch(geminiUrl, {
             method: 'POST',
