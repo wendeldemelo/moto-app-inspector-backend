@@ -68,7 +68,7 @@ Requirements:
 4. Do not mention technical terms like "SDK" or "API Level" to the user, translate it to "optimization version".`;
 
         // ⚠️ ID do Modelo. Se a lista do seu navegador mostrar algo diferente, mude aqui!
-        const model = "gemini-2.0-flash"; 
+        const model = "gemini-1.5-flash"; 
         
         const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
