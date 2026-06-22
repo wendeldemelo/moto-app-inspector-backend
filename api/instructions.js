@@ -99,4 +99,34 @@ Requirements:
             details: error.message
         });
     }
+
+    async function fetchAvailableGeminiModels(apiKey) {
+    const listModelsUrl =
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+
+    const result = await fetch(listModelsUrl);
+    const data = await result.json();
+
+    if (!result.ok) {
+        throw new Error(data?.error?.message ?? "Failed to fetch Gemini models");
+    }
+
+    const models = data.models ?? [];
+
+    return models
+        .filter(model =>
+            model.supportedGenerationMethods?.includes("generateContent")
+        )
+        .map(model => ({
+            id: model.name.replace("models/", ""),
+            fullName: model.name,
+            displayName: model.displayName,
+            description: model.description,
+            version: model.version,
+            inputTokenLimit: model.inputTokenLimit,
+            outputTokenLimit: model.outputTokenLimit,
+            supportedMethods: model.supportedGenerationMethods
+        }));
+    }
+
 }
