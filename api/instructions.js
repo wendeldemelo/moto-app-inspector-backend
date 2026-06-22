@@ -2,42 +2,49 @@ export default async function handler(request, response) {
     const apiKey = process.env.GEMINI_API_KEY;
     
     if (!apiKey) {
-        return response.status(500).json({
-            error: "Missing configuration",
-            details: "The GEMINI_API_KEY key was not configured in Vercel environment variables."
+        return response.status(200).json({
+            instructions: "[MOTO AI] Erro de Infraestrutura: A chave GEMINI_API_KEY não foi configurada nas variáveis de ambiente da Vercel."
         });
     }
 
-    // 🔍 RECURSO DE INSPECÇÃO: Se acessar via GET (Navegador/Postman), lista os modelos na hora!
+    // 🔍 RECURSO DE INSPEÇÃO: Se acessar via GET (pelo seu navegador), lista os modelos na hora!
     if (request.method === 'GET' || request.query.listModels === 'true') {
         try {
             const listModelsUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
             const result = await fetch(listModelsUrl);
             const data = await result.json();
             
-            // Filtra e limpa a resposta para você ver os IDs exatos dos modelos elegíveis
+            if (!result.ok) {
+                return response.status(200).json({ 
+                    error: "Google API Error ao listar modelos", 
+                    details: data?.error?.message || data 
+                });
+            }
+
             const modelosSimplificados = data.models 
-                ? data.models.map(m => ({
-                    id: m.name.replace("models/", ""), // Remove o prefixo para ficar pronto para uso
-                    supportedMethods: m.supportedGenerationMethods,
-                    description: m.description
-                  }))
-                : data;
+                ? data.models
+                    .filter(m => m.supportedGenerationMethods?.includes("generateContent"))
+                    .map(m => ({
+                        id: m.name.replace("models/", ""),
+                        displayName: m.displayName,
+                        description: m.description
+                    }))
+                : [];
 
             return response.status(200).json({
-                aviso: "Use o ID do modelo exatamente como listado abaixo na variável 'model' do seu código.",
-                total_modelos: data.models ? data.models.length : 0,
+                aviso: "Copie o ID do modelo desejado e cole na variável 'model' do bloco POST abaixo.",
+                total_modelos: modelosSimplificados.length,
                 modelos_disponiveis: modelosSimplificados
             });
         } catch (error) {
-            return response.status(500).json({ 
+            return response.status(200).json({ 
                 error: "Failed to fetch models from Google", 
                 details: error.message 
             });
         }
     }
 
-    // --- DAQUI PARA BAIXO SEGUE O SEU FLUXO PADRÃO DO ANDROID (POST) ---
+    // --- FLUXO DO APLICATIVO ANDROID (POST) ---
     if (request.method !== 'POST') {
         return response.status(405).json({ error: 'Method Not Allowed' });
     }
@@ -60,7 +67,7 @@ Requirements:
 3. Keep it brief (maximum 3 concise bullet points).
 4. Do not mention technical terms like "SDK" or "API Level" to the user, translate it to "optimization version".`;
 
-        // Você está usando o gemini-2.0-flash aqui. Mude essa String se o teste do GET mostrar outro ID!
+        // ⚠️ ID do Modelo. Se a lista do seu navegador mostrar algo diferente, mude aqui!
         const model = "gemini-2.0-flash"; 
         
         const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -76,9 +83,9 @@ Requirements:
         const geminiData = await geminiResponse.json();
 
         if (!geminiResponse.ok) {
-            return response.status(geminiResponse.status).json({
-                error: "Gemini API error",
-                details: geminiData?.error?.message ?? geminiData
+            // SOLUÇÃO: Forçamos o status 200 para o Android aceitar e exibir o erro real do Google na tela!
+            return response.status(200).json({
+                instructions: `[ERRO GOOGLE]: ${geminiData?.error?.message || JSON.stringify(geminiData)}`
             });
         }
 
@@ -88,45 +95,13 @@ Requirements:
             return response.status(200).json({ instructions: aiText });
         }
 
-        return response.status(502).json({
-            error: "Unexpected Gemini response",
-            details: geminiData
+        return response.status(200).json({
+            instructions: `[ERRO PAYLOAD]: Resposta inesperada do Gemini. Dados: ${JSON.stringify(geminiData)}`
         });
 
     } catch (error) {
-        return response.status(500).json({
-            error: "Runtime error",
-            details: error.message
+        return response.status(200).json({
+            instructions: `[ERRO NODE.JS]: ${error.message}`
         });
     }
-
-    async function fetchAvailableGeminiModels(apiKey) {
-    const listModelsUrl =
-        `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
-
-    const result = await fetch(listModelsUrl);
-    const data = await result.json();
-
-    if (!result.ok) {
-        throw new Error(data?.error?.message ?? "Failed to fetch Gemini models");
-    }
-
-    const models = data.models ?? [];
-
-    return models
-        .filter(model =>
-            model.supportedGenerationMethods?.includes("generateContent")
-        )
-        .map(model => ({
-            id: model.name.replace("models/", ""),
-            fullName: model.name,
-            displayName: model.displayName,
-            description: model.description,
-            version: model.version,
-            inputTokenLimit: model.inputTokenLimit,
-            outputTokenLimit: model.outputTokenLimit,
-            supportedMethods: model.supportedGenerationMethods
-        }));
-    }
-
 }
