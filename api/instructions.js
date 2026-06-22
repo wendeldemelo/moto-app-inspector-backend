@@ -1,4 +1,4 @@
-// --- FUNÇÕES AUXILIARES (Escopo Global para maior performance) ---
+// --- Auxiliary Functions (Global Scope for Greater Performance) ---
 
 async function fetchAvailableGeminiModels(apiKey) {
     const listModelsUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
@@ -23,7 +23,7 @@ function pickPreferredModel(models) {
     const preferredModels = [
         "gemini-2.5-flash-lite",
         "gemini-2.5-flash",
-        "gemini-1.5-flash", // Garante o fallback para o 1.5 que testamos!
+        "gemini-1.5-flash",
         "gemini-3.5-flash",
         "gemini-3.1-flash-lite"
     ];
@@ -33,25 +33,25 @@ function pickPreferredModel(models) {
     );
 }
 
-// --- HANDLER PRINCIPAL DA VERCEL ---
+// --- MAIN HANDLER OF VERCEL ---
 
 export default async function handler(request, response) {
     const apiKey = process.env.GEMINI_API_KEY;
     
     if (!apiKey) {
         return response.status(200).json({
-            instructions: "[MOTO AI] Erro de Infraestrutura: A chave GEMINI_API_KEY não foi configurada nas variáveis de ambiente da Vercel."
+            instructions: "[MOTO AI] Infrastructure Error: The GEMINI_API_KEY key was not configured in the Vercel environment variables."
         });
     }
 
-    // 🔍 RECURSO DE INSPEÇÃO: Se acessar via GET (Navegador), lista os modelos na hora
+    // 🔍 INSPECTION FEATURE: If accessed via GET (Browser), it lists the models instantly.
     if (request.method === 'GET' || request.query.listModels === 'true') {
         try {
             const models = await fetchAvailableGeminiModels(apiKey);
             return response.status(200).json({
-                aviso: "O sistema de post escolherá automaticamente o melhor modelo desta lista.",
-                total_modelos_disponiveis: models.length,
-                modelos_disponiveis: models
+                notice: "The posting system will automatically choose the best template from this list.",
+                total_models_available: models.length,
+                models_available: models
             });
         } catch (error) {
             return response.status(200).json({ 
@@ -61,7 +61,7 @@ export default async function handler(request, response) {
         }
     }
 
-    // --- FLUXO DO APLICATIVO ANDROID (POST) ---
+    // --- ANDROID APPLICATION FLOW (POST) ---
     if (request.method !== 'POST') {
         return response.status(405).json({ error: 'Method Not Allowed' });
     }
@@ -70,7 +70,7 @@ export default async function handler(request, response) {
         const { app_name, package_name, target_sdk, reasons } = request.body;
 
         const prompt = `You are an AI Assistant, an expert in Android security and performance for Android devices.
-Provide clear, friendly, and short step-by-step instructions in Portuguese to help a regular user fix the compatibility or privacy issues found in this app.
+Provide clear, friendly, and short step-by-step instructions to help a regular user fix the compatibility or privacy issues found in this app.
 
 App Context:
 - Name: ${app_name}
@@ -82,16 +82,16 @@ Requirements:
 1. Start directly with a warm but professional tone.
 2. Give actionable steps. If the issue is sensitive permissions, tell them to go to settings. If it's a suspicious app or headless app, suggest uninstallation.
 3. Keep it brief (maximum 3 concise bullet points).
-4. Do not mention technical terms like "SDK" or "API Level" to the user, translate it to "versão de otimização".`;
+4. Do not mention technical terms like "SDK" or "API Level" to the user, translate it to "optimization version".`;
 
-        // Busca e escolhe o modelo dinamicamente
+        // Search and choose the model dynamically.
         const models = await fetchAvailableGeminiModels(apiKey);
         const model = pickPreferredModel(models);
         
-        // CORREÇÃO: Se não achar modelo, avisa o Android com status 200 para printar o erro na tela
+        // If the model is not found, notify Android with status 200 to print the error on the screen.
         if (!model) {
             return response.status(200).json({
-                instructions: `[ERRO MOTO AI]: Nenhum modelo compatível com geração de conteúdo foi liberado para a sua chave do Google AI Studio.`
+                instructions: `[MOTO AI ERROR]: No compatible content generation models have been released for your Google AI Studio key.`
             });
         }
         
@@ -109,7 +109,7 @@ Requirements:
 
         if (!geminiResponse.ok) {
             return response.status(200).json({
-                instructions: `[ERRO GOOGLE]: ${geminiData?.error?.message || JSON.stringify(geminiData)}`
+                instructions: `[GOOGLE ERROR]: ${geminiData?.error?.message || JSON.stringify(geminiData)}`
             });
         }
 
@@ -120,12 +120,12 @@ Requirements:
         }
 
         return response.status(200).json({
-            instructions: `[ERRO PAYLOAD]: Resposta inesperada do Gemini. Dados: ${JSON.stringify(geminiData)}`
+            instructions: `[PAYLOAD ERROR]: Unexpected response from Gemini. Data: ${JSON.stringify(geminiData)}`
         });
 
     } catch (error) {
         return response.status(200).json({
-            instructions: `[ERRO NODE.JS]: ${error.message}`
+            instructions: `[NODE.JS ERROR]: ${error.message}`
         });
     }
 }
